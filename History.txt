@@ -1,3 +1,10 @@
+== 1.1.0 2015-05-05
+* 1 minor enhancement:
+  * added stats command to give you information about your queue
+== 1.0.0 2015-05-05
+* 2 major enhancements:
+  * changed r(emove) to be removal of an item not completing it (does not write to history)
+  * added c(omplete) to finish an item take it out of the queue and write it to the history file.
 == 0.0.1 2009-10-02
 
 * 1 major enhancement:

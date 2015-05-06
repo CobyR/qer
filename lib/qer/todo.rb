@@ -1,9 +1,5 @@
 module Qer
   class ToDo
-    class << self
-      attr_accessor :quiet
-    end
-
     attr_accessor :queue
     attr_accessor :history
 
@@ -17,6 +13,10 @@ module Qer
 
     def file(mode = "r")
       File.new(@filename, mode)
+    end
+
+    def quiet
+      File.exists?(File.expand_path("~/.qer-quiet"))
     end
 
     def history_file(mode = "r")
@@ -39,11 +39,17 @@ module Qer
     end
 
     def remove(index)
+      self.queue.delete_at(index)
+      write
+      print "Removed: item #{index}, no history exists of this."
+    end
+
+    def complete(index)
       returning(item = self.queue.delete_at(index)) do
         self.history << [Time.now.to_s, item[0], item[1]]
         write_history
         write
-        print "Removed #{item.last}"
+        print "Completed #{item.last}"
       end
     end
 
@@ -54,7 +60,7 @@ module Qer
     end
 
     def pop
-      remove(0)
+      complete(0)
     end
 
     def push(item)
@@ -76,7 +82,7 @@ module Qer
     end
 
     def title
-      "> Stuff on the Hopper < ".center(width, '-')
+      "> Queue of stuff to do < ".center(width, '-')
     end
 
     def hl
@@ -105,15 +111,15 @@ module Qer
       right.insert(0, left)
     end
 
-    def print(string = nil)
-      dump self.queue, string
+    def print(string = nil, override_quiet = false)
+      dump self.queue, string, title, override_quiet
     end
 
-    def print_history(string = nil)
-      dump self.history, string, "Stuff Completed"
+    def print_history(string = nil, override_quiet = true)
+      dump self.history, string, "Stuff Completed", override_quiet
     end
 
-    def dump(queue, string, label = title)
+    def dump(queue, string, label = title, override_quiet = false)
       out = []
       out << string if(string)
       out << label
@@ -126,20 +132,47 @@ module Qer
         out << "Nothing in this queue!"
       end
       out << hl
-      puts out.join("\n") unless self.class.quiet
+      if !self.quiet || override_quiet
+        puts out.join("\n")
+      end
     end
 
     def command(args)
       case(args.shift)
-      when /^a(dd)?/     : self.add(args.join(" "))     # qer add Some task 1
-      when /^r(emove)?/  : self.remove(args.shift.to_i) # qer remove 0
-      when /^pu(sh)?/    : self.push(args.join(" "))    # qer push Some task 2
-      when /^po(p)?/     : self.pop                     # qer pop
-      when /^clear/      : self.clear                   # qer clear
-      when /^h(istory)?/  : self.print_history           # qer history
-      when /.*help/      : self.help                    # qer help
-      else self.print                                 # qer
+      when /^a(dd)?/
+        self.add(args.join(" "))       # qer add Some task 1
+      when /^c(omplete)?/
+        self.complete(args.shift.to_i) # qer complete 0
+      when /^pu(sh)?/
+        self.push(args.join(" "))      # qer push Some task 2
+      when /^po(p)?/
+        self.pop                       # qer pop
+      when /^clear/
+        self.clear                     # qer clear
+      when /^h(istory)?/
+        self.print_history             # qer history
+      when /.*help/
+        self.help                      # qer help
+      when /^r(emove)?/
+        self.remove(args.shift.to_i)   # qer remove 0
+      when /^st(ats)?/
+        self.stats                     # qer stats
+      when /^q/
+        if self.quiet
+          FileUtils.rm(File.expand_path("~/.qer-quiet"))
+        else
+          FileUtils.touch(File.expand_path("~/.qer-quiet"))
+        end
+        puts "Quiet: #{self.quiet}"
+      else
+        self.print nil, true                     # qer
       end
+    end
+
+    def stats
+      puts "#{self.queue.count} items in your queue."
+      puts "#{self.history.count} items in your history."
+      puts "Qer is in quite mode: #{self.quiet}"
     end
 
     def help
@@ -152,11 +185,13 @@ Commands:
     `qer`
   a(dd) - Adds a task to the end of the list
     `qer add Stuff to do`
-  r(emove) - Remove the given task number from the list
+  c(omplete) - Completes a task, removes it from the list, and writes it to the history.
+     `qer complete 2`
+  r(emove) - Removes the given task number from the list, does not update history.
     `qer remove 2`
   pu(sh) - Push a task onto the top of the list
     `qer push Another boring thing`
-  po(p) - Pops the top item off the list
+  po(p) - Pops the top item off the list, and writes to history.
     `qer pop`
   clear - Clears the entire list
     `qer clear`
@@ -166,7 +201,7 @@ Commands:
     `qer help`
 #{hl}
       EOF
-      puts string unless self.class.quiet
+      puts string
     end
   end
 end

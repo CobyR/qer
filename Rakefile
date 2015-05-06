@@ -12,10 +12,11 @@ $hoe = Hoe.new('qer', Qer::VERSION) do |p|
   p.description          = "Qer is an easy command-line todo list."
   p.summary              = "Just type `qer --help` to get started."
   p.extra_dev_deps = [
-    ['shoulda','= 2.10.1'],
-    ['newgem', ">= #{::Newgem::VERSION}"]
+                      ['shoulda','= 2.10.1'],
+                      ['newgem', ">= #{::Newgem::VERSION}"],
+                      ['iconv']
   ]
-  
+
   p.clean_globs |= %w[**/.DS_Store tmp *.log]
   path = (p.rubyforge_name == p.name) ? p.rubyforge_name : "\#{p.rubyforge_name}/\#{p.name}"
   p.remote_rdoc_dir = File.join(path.gsub(/^#{p.rubyforge_name}\/?/,''), 'rdoc')
